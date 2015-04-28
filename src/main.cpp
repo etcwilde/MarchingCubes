@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 #include <glm/vec3.hpp>
 
@@ -333,7 +334,7 @@ glm::vec3 VertexInterp(float iso, const glm::vec3& p1,
 			p1.z + mu * (p2.z - p1.z));
 }
 
-int Polygonize(GRIDCELL grid, float iso_value, std::vector<TRIANGLE> triangles)
+int ResolveCube(GRIDCELL grid, float iso_value, std::vector<TRIANGLE> triangles)
 {
 	int i, n_triang;
 	int cube_index;
@@ -473,7 +474,27 @@ int Polygonize(GRIDCELL grid, float iso_value, std::vector<TRIANGLE> triangles)
 	return triangles.size();
 }
 
+Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
+{
+	glm::vec3 minima, maxima;
+	minima = scene.GetBoundingBox().min();
+	maxima = scene.GetBoundingBox().max();
 
+	float delta_x = maxima.x - minima.x;
+	float delta_y = maxima.y - minima.y;
+	float delta_z = maxima.z - minima.z;
+	float max_delta = std::max(delta_x, std::max(delta_y, delta_z));
+
+	float voxel_size = max_cubes / max_delta;
+	minima -= glm::vec3(voxel_size, voxel_size, voxel_size);
+	maxima += glm::vec3(voxel_size, voxel_size, voxel_size);
+
+	int x_cubes = std::ceil(voxel_size * delta_x);
+	int y_cubes = std::ceil(voxel_size * delta_y);
+	int z_cubes = std::ceil(voxel_size * delta_z);
+
+	GRIDCELL voxels[x_cubes][y_cubes][z_cubes];
+}
 
 int main()
 {
