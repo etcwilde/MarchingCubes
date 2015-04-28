@@ -5,6 +5,7 @@
 #include <glm/vec3.hpp>
 
 #include "implicit/ImplicitSystem.hpp"
+#include "Mesh.hpp"
 
 /**
  * Used to compare marching cubes algorithm with marching triangles algorithm
@@ -14,10 +15,7 @@
  * Polygonizer from
  * http://paulbourke.net/geometry/polygonise/
  */
-typedef struct
-{
-	glm::vec3 p[3];
-} TRIANGLE;
+
 
 typedef struct
 {
@@ -321,6 +319,19 @@ int triTable[256][16] =
 {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
 
+glm::vec3 VertexInterp(float iso, const glm::vec3& p1,
+		const glm::vec3& p2, float v1, float v2)
+{
+	float mu;
+	if (std::abs(iso - v1) <= FLT_EPSILON) return p1;
+	if (std::abs(iso - v2) <= FLT_EPSILON) return p2;
+	if (std::abs(v1 - v2) <= FLT_EPSILON) return p1;
+	mu = (iso - v1) / (v2 / v1);
+	return glm::vec3(
+			p1.x + mu * (p2.x - p1.x),
+			p1.y + mu * (p2.y - p1.y),
+			p1.z + mu * (p2.z - p1.z));
+}
 
 int Polygonize(GRIDCELL grid, float iso_value, std::vector<TRIANGLE> triangles)
 {
@@ -341,11 +352,140 @@ int Polygonize(GRIDCELL grid, float iso_value, std::vector<TRIANGLE> triangles)
 	// Cube is entirely in out of surface
 	if (edgeTable[cube_index] == 0) return 0;
 
-	// Find vertices where the surface intersects cube
-	// Use built-in root-finder maybe?
+	// Find vertices where surface intersects cube
+
+	if (edgeTable[cube_index] & 1)
+	{
+		vertlist[0] =
+			VertexInterp(iso_value,
+					grid.p[0],
+					grid.p[1],
+					grid.val[0],
+					grid.val[1]);
+	}
+	if (edgeTable[cube_index] & 2)
+	{
+		vertlist[1] =
+			VertexInterp(iso_value,
+					grid.p[1],
+					grid.p[2],
+					grid.val[1],
+					grid.val[2]);
+	}
+	if (edgeTable[cube_index] & 4)
+	{
+		vertlist[2] =
+			VertexInterp(iso_value,
+					grid.p[2],
+					grid.p[3],
+					grid.val[2],
+					grid.val[3]);
+	}
+	if (edgeTable[cube_index] & 8)
+	{
+		vertlist[3] =
+			VertexInterp(iso_value,
+					grid.p[3],
+					grid.p[0],
+					grid.val[3],
+					grid.val[0]);
+	}
+	if (edgeTable[cube_index] & 16)
+	{
+		vertlist[4] =
+			VertexInterp(iso_value,
+					grid.p[4],
+					grid.p[5],
+					grid.val[4],
+					grid.val[5]);
+	}
+	if (edgeTable[cube_index] & 32)
+	{
+		vertlist[5] =
+			VertexInterp(iso_value,
+					grid.p[5],
+					grid.p[6],
+					grid.val[5],
+					grid.val[6]);
+	}
+	if (edgeTable[cube_index] & 64)
+	{
+		vertlist[6] =
+			VertexInterp(iso_value,
+					grid.p[6],
+					grid.p[7],
+					grid.val[6],
+					grid.val[7]);
+	}
+	if (edgeTable[cube_index] & 128)
+	{
+		vertlist[7] =
+			VertexInterp(iso_value,
+					grid.p[7],
+					grid.p[4],
+					grid.val[7],
+					grid.val[4]);
+	}
+	if (edgeTable[cube_index] & 256)
+	{
+		vertlist[8] =
+			VertexInterp(iso_value,
+					grid.p[0],
+					grid.p[4],
+					grid.val[0],
+					grid.val[4]);
+	}
+	if (edgeTable[cube_index] & 512)
+	{
+		vertlist[9] =
+			VertexInterp(iso_value,
+					grid.p[1],
+					grid.p[5],
+					grid.val[1],
+					grid.val[5]);
+	}
+	if (edgeTable[cube_index] & 1024)
+	{
+		vertlist[10] =
+			VertexInterp(iso_value,
+					grid.p[2],
+					grid.p[6],
+					grid.val[2],
+					grid.val[6]);
+	}
+	if (edgeTable[cube_index] & 2048)
+	{
+		vertlist[11] =
+			VertexInterp(iso_value,
+					grid.p[3],
+					grid.p[7],
+					grid.val[3],
+					grid.val[7]);
+	}
+
+	// Create triangles
+	for (i = 0; triTable[cube_index][i] != -1; i+= 3)
+	{
+		triangles[triangles.size()].p[0] = vertlist[triTable[cube_index][i]];
+		triangles[triangles.size()].p[1] = vertlist[triTable[cube_index][i+1]];
+		triangles[triangles.size()].p[2] = vertlist[triTable[cube_index][i+2]];
+	}
+	return triangles.size();
 }
+
+
 
 int main()
 {
+	TRIANGLE t1 = {glm::vec3(0, 1, 0), glm::vec3(1, 0, 0), glm::vec3(0, 0, 0)};
+	TRIANGLE t2 = {glm::vec3(0, -1, 0), glm::vec3(-1, 0, 0), glm::vec3(0, 0, 0)};
+	TRIANGLE t3 = {glm::vec3(0, 0, 0), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0)};
+
+	std::vector<TRIANGLE> tris;
+	tris.push_back(t1);
+	tris.push_back(t2);
+	tris.push_back(t3);
+	Mesh m(tris);
+	m.Export("output.obj");
 	return 0;
 }
