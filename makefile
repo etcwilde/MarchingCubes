@@ -72,13 +72,17 @@ TEST_OBJS	= \
 	  $(patsubst $(D_TEST)%.C, $(D_BUILD)%.o, \
 	  $(patsubst $(D_TEST)%.cc, $(D_BUILD)%.o, $(TEST_SRCS)))))
 
-.PHONY:	all release debug test clean rebuild docs
+.PHONY:	all release profile debug test clean rebuild docs
 # No optimizations
 all: $(D_BIN)$(EXEC)
 
 # Optimizations
 release: CFLAGS += -O3
 release: all
+
+profile: CFLAGS += -O3 -DPROFILE
+profile: LIBS += -lprofiler
+profile: all
 
 # Debug flags, function names, and all errors reported
 debug: CFLAGS += -g -DDEBUG -Wall
