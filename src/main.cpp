@@ -367,71 +367,64 @@ int ResolveCube(GRIDCELL grid, float iso_value, std::vector<TRIANGLE>& triangles
 	if (edgeTable[cube_index] & 1)
 	{
 		// edge 0 is between vert 0 and 1
-		vertlist[0] = grid.p[0];
+		vertlist[0] = (grid.p[0] + grid.p[1]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 2)
 	{
 		// edge 1 is between vert 1 and 2
-		vertlist[1] = grid.p[1];
+		vertlist[1] = (grid.p[1] + grid.p[2]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 4)
 	{
 		// edge 2 is between vert 2 and 3
-		vertlist[2] = grid.p[2];
-
+		vertlist[2] = (grid.p[2] + grid.p[3]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 8)
 	{
 		// edge 3 is between vert 3 and 0
-		vertlist[3] = grid.p[3];
+		vertlist[3] = (grid.p[3] + grid.p[0]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 16)
 	{
 		// edge 4 is between vert 4 and 5
-		vertlist[4] = grid.p[4];
+		vertlist[4] = (grid.p[4] + grid.p[5]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 32)
 	{
 		// edge 5 is between vert 5 and 6
-		vertlist[5] = grid.p[5];
+		vertlist[5] = (grid.p[5] + grid.p[6]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 64)
 	{
 		// edge 6 is between vert 6 and 7
-		vertlist[6] = grid.p[6];
+		vertlist[6] = (grid.p[6] + grid.p[7]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 128)
 	{
 		// edge 7 is between vert 7 and 4
-		vertlist[7] = grid.p[7];
+		vertlist[7] = (grid.p[7] + grid.p[4]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 256)
 	{
 		// edge 8 is between vert 0 and 4
-		vertlist[8] = grid.p[0];
+		vertlist[8] = (grid.p[0] + grid.p[4]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 512)
 	{
 		// edge 9 is between vert 1 and 5
-		vertlist[9] = grid.p[1];
+		vertlist[9] = (grid.p[1] + grid.p[5]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 1024)
 	{
 		// edge 10 is between vert 2 and 6
-		vertlist[10] = grid.p[2];
+		vertlist[10] = (grid.p[2] + grid.p[6]) / 2.f;
 	}
 	if (edgeTable[cube_index] & 2048)
 	{
 		// edge 11 is between vert 3 and 7
-		vertlist[11] = grid.p[3];
+		vertlist[11] = (grid.p[3] + grid.p[7]) / 2.f;;
 	}
 	// Create triangles
-#ifdef DEBUG
-	std::cout << " --- BUILD TRIANGLES ---\n";
-	std::cout << "VERTEX LIST\n";
-	for (i = 0; i < 12; i++)
-		std::cout << '[' << i << "]: " << vertlist[i] << '\n';
-#endif
 	for (i = 0; triTable[cube_index][i] != -1; i+= 3)
 	{
 		TRIANGLE t;
@@ -439,14 +432,6 @@ int ResolveCube(GRIDCELL grid, float iso_value, std::vector<TRIANGLE>& triangles
 		t.p[1] = vertlist[triTable[cube_index][i+1]];
 		t.p[2] = vertlist[triTable[cube_index][i+2]];
 		triangles.push_back(t);
-#ifdef DEBUG
-		std::cout << "Triangle table: " << triTable[cube_index][i] << ' ' <<
-			triTable[cube_index][i+1] <<  ' ' <<
-			triTable[cube_index][i+2] << '\n';
-
-		std::cout << t.p[0] << ", " << t.p[1] << ", " << t.p[2] << '\n';
-		std::cout << "Triangles: " << triangles.size() << '\n';
-#endif
 	}
 	return triangles.size();
 }
@@ -474,9 +459,9 @@ Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
 	// minima -= glm::vec3(voxel_size, voxel_size, voxel_size);
 	// maxima += glm::vec3(voxel_size, voxel_size, voxel_size);
 
-	unsigned int x_cubes = std::ceil(delta_x / voxel_size) + 1;
-	unsigned int y_cubes = std::ceil(delta_y / voxel_size) + 1;
-	unsigned int z_cubes = std::ceil(delta_z / voxel_size) + 1;
+	unsigned int x_cubes = std::ceil(delta_x / voxel_size);
+	unsigned int y_cubes = std::ceil(delta_y / voxel_size);
+	unsigned int z_cubes = std::ceil(delta_z / voxel_size);
 
 #ifdef DEBUG
 	std::cout << "dx: " << delta_x << " dy: " << delta_y << " dz: " << delta_z << '\n';
@@ -485,22 +470,31 @@ Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
 	std::cout << "Voxel Memory Requirement: " << x_cubes * y_cubes * z_cubes * sizeof(GRIDCELL) << " bytes\n";
 #endif
 
-	/*
-	GRIDCELL* voxels = (GRIDCELL*)malloc(x_cubes * y_cubes * z_cubes * sizeof(GRIDCELL));
+	GRIDCELL*** voxels = new GRIDCELL**[x_cubes];
+	std::vector<TRIANGLE> tris;
+
+	for (unsigned int i = 0; i < x_cubes; i++)
+	{
+		voxels[i] = new GRIDCELL*[y_cubes];
+		for (unsigned int j = 0; j < y_cubes; j++)
+			voxels[i][j] = new GRIDCELL[z_cubes];
+	}
+
 	if (voxels == NULL)
 	{
 		std::cerr << "Unable to allocate voxel memory\n";
-		return;
-	} */
+		return Mesh(tris);
+	}
 
-	GRIDCELL voxels[x_cubes][y_cubes][z_cubes];
-	std::vector<TRIANGLE> tris;
+	//GRIDCELL voxels[x_cubes][y_cubes][z_cubes];
 	// Initialize gridcells
 #ifdef DEBUG
 	std::cout << " -------------- [ BUILD VOXELS ] ----------------\n";
 #endif
 	for (unsigned int x = 0; x < x_cubes; x++)
+	{
 		for (unsigned int y = 0; y < y_cubes; y++)
+		{
 			for (unsigned int z = 0; z < z_cubes; z++)
 			{
 				voxels[x][y][z].p[0] = minima +
@@ -574,11 +568,27 @@ Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
 				std::cout << voxels[x][y][z].p[7] << ' ' << voxels[x][y][z].val[7]<< '\n';
 #endif
 				ResolveCube(voxels[x][y][z], 0, tris);
+				//break;
 			}
+			//break;
+		}
+		//break;
+	}
 #ifdef DEBUG
 	std::cout << "Triangles: " << tris.size() << '\n';
 #endif
 	Mesh m(tris);
+
+	for (unsigned int i = 0; i < x_cubes; i++)
+	{
+		for (unsigned int j = 0; j < y_cubes; j++)
+		{
+			delete voxels[i][j];
+		}
+		delete voxels[i];
+	}
+	delete voxels;
+
 	return m;
 }
 
@@ -600,11 +610,24 @@ int main()
 #endif
 
 	Implicit::Sphere s(geoffFunction);
-	Implicit::Translate t1(&s, 1, 0, 0);
-	Implicit::Translate t2(&s, -1, 0, 0);
-	Implicit::Blend b1(&t1, &t2);
-	// Due to the stack limit of 8mb, this cannot go above 39 voxels
-	Mesh m = Polygonize(s, 10);
+	Implicit::Line l(geoffFunction);
+
+	Implicit::Scale line_scale(&l, 2, 1, 1);
+	Implicit::Scale sphere_scale(&s, 1.2);
+	Implicit::Translate sphere_translate_1(&sphere_scale, 2, 0, 0);
+	Implicit::Translate sphere_translate_2(&sphere_scale, -2, 0, 0);
+	Implicit::Union caps1(&sphere_translate_1, &sphere_translate_2);
+	Implicit::Rotate caps2(&caps1, glm::vec3(0, 1, 0), M_PI/2.f);
+	Implicit::Union caps(&caps1, &caps2);
+
+	Implicit::Rotate r1(&line_scale, glm::vec3(0, 1, 0), M_PI/2.f);
+	Implicit::Rotate r2(&line_scale, glm::vec3(0, 0, 1), M_PI/2.f);
+	Implicit::Union u1(&r1, &r2);
+	Implicit::Union u2(&line_scale, &u1);
+
+
+	Implicit::Union jack(&u2, &caps);
+	Mesh m = Polygonize(jack, 150);
 	m.Export("output.obj");
 	return 0;
 }
