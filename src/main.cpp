@@ -349,11 +349,6 @@ int ResolveCube(GRIDCELL grid, float iso_value, std::vector<TRIANGLE>& triangles
 	if (grid.val[5] > iso_value) cube_index |= 32;
 	if (grid.val[6] > iso_value) cube_index |= 64;
 	if (grid.val[7] > iso_value) cube_index |= 128;
-#ifdef DEBUG
-	std::cout << "Cube index: " << (std::bitset<8>) cube_index << ' ' << cube_index << '\n';
-	std::cout << "Edge Index: " << (std::bitset<9>) edgeTable[cube_index] << '\n';
-#endif
-
 	// Cube is entirely in out of surface
 	if (edgeTable[cube_index] == 0) return 0;
 
@@ -564,7 +559,7 @@ Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
 #ifdef PROFILE
 	ProfilerStop();
 #endif
-	Mesh m(tris);
+	Mesh m(scene, tris);
 	return m;
 }
 
@@ -586,6 +581,7 @@ int main()
 	Implicit::Union u1(&r1, &r2);
 	Implicit::Union u2(&line_scale, &u1);
 	Implicit::Union jack(&u2, &caps);
+
 	Mesh m = Polygonize(jack, 70);
 
 	m.Export("output.obj");
