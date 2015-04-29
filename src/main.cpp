@@ -9,6 +9,10 @@
 #include "implicit/ImplicitSystem.hpp"
 #include "Mesh.hpp"
 
+#ifdef PROFILE
+#include <gperftools/profiler.h>
+#endif
+
 /**
  * Used to compare marching cubes algorithm with marching triangles algorithm
  */
@@ -321,19 +325,14 @@ int triTable[256][16] =
 {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 };
 
-glm::vec3 VertexInterp(float iso, const glm::vec3& p1,
-		const glm::vec3& p2, float v1, float v2)
+glm::vec3 VertexInterp(const glm::vec3& x0,
+		const glm::vec3& x1, float fx0, float fx1)
 {
-	float mu;
-	if (std::abs(iso - v1) <= FLT_EPSILON) return p1;
-	if (std::abs(iso - v2) <= FLT_EPSILON) return p2;
-	if (std::abs(v1 - v2) <= FLT_EPSILON) return p1;
-	mu = (iso - v1) / (v2 / v1);
-	return glm::vec3(
-			p1.x + mu * (p2.x - p1.x),
-			p1.y + mu * (p2.y - p1.y),
-			p1.z + mu * (p2.z - p1.z));
+	if (std::abs(fx0 - fx1) <= FLT_EPSILON) return x0;
+	// Standard Linear Interpolation
+	return x0 - fx0 * ((x1 - x0) / (fx1 - fx0));
 }
+
 
 int ResolveCube(GRIDCELL grid, float iso_value, std::vector<TRIANGLE>& triangles)
 {
@@ -367,70 +366,71 @@ int ResolveCube(GRIDCELL grid, float iso_value, std::vector<TRIANGLE>& triangles
 	if (edgeTable[cube_index] & 1)
 	{
 		// edge 0 is between vert 0 and 1
-		vertlist[0] = (grid.p[0] + grid.p[1]) / 2.f;
+		vertlist[0] = VertexInterp(grid.p[0], grid.p[1], grid.val[0], grid.val[1]);
 	}
 	if (edgeTable[cube_index] & 2)
 	{
 		// edge 1 is between vert 1 and 2
-		vertlist[1] = (grid.p[1] + grid.p[2]) / 2.f;
+		vertlist[1] = VertexInterp(grid.p[1] , grid.p[2], grid.val[1], grid.val[2]);
 	}
 	if (edgeTable[cube_index] & 4)
 	{
 		// edge 2 is between vert 2 and 3
-		vertlist[2] = (grid.p[2] + grid.p[3]) / 2.f;
+		vertlist[2] = VertexInterp(grid.p[2], grid.p[3], grid.val[2], grid.val[3]);
 	}
 	if (edgeTable[cube_index] & 8)
 	{
 		// edge 3 is between vert 3 and 0
-		vertlist[3] = (grid.p[3] + grid.p[0]) / 2.f;
+		vertlist[3] =  VertexInterp(grid.p[3], grid.p[0], grid.val[3], grid.val[0]);
 	}
 	if (edgeTable[cube_index] & 16)
 	{
 		// edge 4 is between vert 4 and 5
-		vertlist[4] = (grid.p[4] + grid.p[5]) / 2.f;
+		vertlist[4] = VertexInterp(grid.p[4], grid.p[5], grid.val[4], grid.val[5]);
 	}
 	if (edgeTable[cube_index] & 32)
 	{
 		// edge 5 is between vert 5 and 6
-		vertlist[5] = (grid.p[5] + grid.p[6]) / 2.f;
+		vertlist[5] = VertexInterp(grid.p[5], grid.p[6], grid.val[5], grid.val[6]);
+
 	}
 	if (edgeTable[cube_index] & 64)
 	{
 		// edge 6 is between vert 6 and 7
-		vertlist[6] = (grid.p[6] + grid.p[7]) / 2.f;
+		vertlist[6] = VertexInterp(grid.p[6], grid.p[7], grid.val[6], grid.val[7]);
 	}
 	if (edgeTable[cube_index] & 128)
 	{
 		// edge 7 is between vert 7 and 4
-		vertlist[7] = (grid.p[7] + grid.p[4]) / 2.f;
+		vertlist[7] = VertexInterp(grid.p[7], grid.p[4], grid.val[7], grid.val[4]);
 	}
 	if (edgeTable[cube_index] & 256)
 	{
 		// edge 8 is between vert 0 and 4
-		vertlist[8] = (grid.p[0] + grid.p[4]) / 2.f;
+		vertlist[8] = VertexInterp(grid.p[0], grid.p[4], grid.val[0], grid.val[4]);
 	}
 	if (edgeTable[cube_index] & 512)
 	{
 		// edge 9 is between vert 1 and 5
-		vertlist[9] = (grid.p[1] + grid.p[5]) / 2.f;
+		vertlist[9] = VertexInterp(grid.p[1], grid.p[5], grid.val[1], grid.val[5]);
 	}
 	if (edgeTable[cube_index] & 1024)
 	{
 		// edge 10 is between vert 2 and 6
-		vertlist[10] = (grid.p[2] + grid.p[6]) / 2.f;
+		vertlist[10] = VertexInterp(grid.p[2], grid.p[6], grid.val[2], grid.val[6]);
 	}
 	if (edgeTable[cube_index] & 2048)
 	{
 		// edge 11 is between vert 3 and 7
-		vertlist[11] = (grid.p[3] + grid.p[7]) / 2.f;;
+		vertlist[11] = VertexInterp(grid.p[3], grid.p[7], grid.val[3], grid.val[7]);
 	}
 	// Create triangles
 	for (i = 0; triTable[cube_index][i] != -1; i+= 3)
 	{
 		TRIANGLE t;
-		t.p[0] = vertlist[triTable[cube_index][i]];
+		t.p[0] = vertlist[triTable[cube_index][i+2]];
 		t.p[1] = vertlist[triTable[cube_index][i+1]];
-		t.p[2] = vertlist[triTable[cube_index][i+2]];
+		t.p[2] = vertlist[triTable[cube_index][i]];
 		triangles.push_back(t);
 	}
 	return triangles.size();
@@ -438,6 +438,10 @@ int ResolveCube(GRIDCELL grid, float iso_value, std::vector<TRIANGLE>& triangles
 
 Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
 {
+
+#ifdef PROFILE
+	ProfilerStart("polyprof.bin");
+#endif
 	glm::vec3 minima, maxima;
 	minima = scene.GetBoundingBox().min();
 	maxima = scene.GetBoundingBox().max();
@@ -470,31 +474,21 @@ Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
 	std::cout << "Voxel Memory Requirement: " << x_cubes * y_cubes * z_cubes * sizeof(GRIDCELL) << " bytes\n";
 #endif
 
-	GRIDCELL*** voxels = new GRIDCELL**[x_cubes];
 	std::vector<TRIANGLE> tris;
-
-	for (unsigned int i = 0; i < x_cubes; i++)
-	{
-		voxels[i] = new GRIDCELL*[y_cubes];
-		for (unsigned int j = 0; j < y_cubes; j++)
-			voxels[i][j] = new GRIDCELL[z_cubes];
-	}
-
-	if (voxels == NULL)
-	{
-		std::cerr << "Unable to allocate voxel memory\n";
-		return Mesh(tris);
-	}
 
 	//GRIDCELL voxels[x_cubes][y_cubes][z_cubes];
 	// Initialize gridcells
 #ifdef DEBUG
 	std::cout << " -------------- [ BUILD VOXELS ] ----------------\n";
 #endif
+
+	GRIDCELL*** voxels = new GRIDCELL**[x_cubes];
 	for (unsigned int x = 0; x < x_cubes; x++)
 	{
+		voxels[x] = new GRIDCELL*[y_cubes];
 		for (unsigned int y = 0; y < y_cubes; y++)
 		{
+			voxels[x][y] = new GRIDCELL[z_cubes];
 			for (unsigned int z = 0; z < z_cubes; z++)
 			{
 				voxels[x][y][z].p[0] = minima +
@@ -556,59 +550,26 @@ Mesh Polygonize(Implicit::Object& scene, unsigned int max_cubes)
 				voxels[x][y][z].val[5] = scene.Evaluate(voxels[x][y][z].p[5]);
 				voxels[x][y][z].val[6] = scene.Evaluate(voxels[x][y][z].p[6]);
 				voxels[x][y][z].val[7] = scene.Evaluate(voxels[x][y][z].p[7]);
-#ifdef DEBUG
-				std::cout << x << ", " << y << ", " << z << '\n';
-				std::cout << voxels[x][y][z].p[0] << ' ' << voxels[x][y][z].val[0]<< '\n';
-				std::cout << voxels[x][y][z].p[1] << ' ' << voxels[x][y][z].val[1]<< '\n';
-				std::cout << voxels[x][y][z].p[2] << ' ' << voxels[x][y][z].val[2]<< '\n';
-				std::cout << voxels[x][y][z].p[3] << ' ' << voxels[x][y][z].val[3]<< '\n';
-				std::cout << voxels[x][y][z].p[4] << ' ' << voxels[x][y][z].val[4]<< '\n';
-				std::cout << voxels[x][y][z].p[5] << ' ' << voxels[x][y][z].val[5]<< '\n';
-				std::cout << voxels[x][y][z].p[6] << ' ' << voxels[x][y][z].val[6]<< '\n';
-				std::cout << voxels[x][y][z].p[7] << ' ' << voxels[x][y][z].val[7]<< '\n';
-#endif
 				ResolveCube(voxels[x][y][z], 0, tris);
-				//break;
 			}
-			//break;
+			delete voxels[x][y];
 		}
-		//break;
+		delete voxels[x];
 	}
+	delete voxels;
 #ifdef DEBUG
 	std::cout << "Triangles: " << tris.size() << '\n';
 #endif
+
+#ifdef PROFILE
+	ProfilerStop();
+#endif
 	Mesh m(tris);
-
-	for (unsigned int i = 0; i < x_cubes; i++)
-	{
-		for (unsigned int j = 0; j < y_cubes; j++)
-		{
-			delete voxels[i][j];
-		}
-		delete voxels[i];
-	}
-	delete voxels;
-
 	return m;
 }
 
 int main()
 {
-	/*TRIANGLE t1 = {glm::vec3(0, 1, 0), glm::vec3(1, 0, 0), glm::vec3(0, 0, 0)};
-	TRIANGLE t2 = {glm::vec3(0, -1, 0), glm::vec3(-1, 0, 0), glm::vec3(0, 0, 0)};
-	TRIANGLE t3 = {glm::vec3(0, 0, 0), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0)};
-
-	std::vector<TRIANGLE> tris;
-	tris.push_back(t1);
-	tris.push_back(t2);
-	tris.push_back(t3);
-	Mesh m(tris);
-	m.Export("output.obj"); */
-
-#ifdef DEBUG
-	std::cout << "Starting Polygonization\n";
-#endif
-
 	Implicit::Sphere s(geoffFunction);
 	Implicit::Line l(geoffFunction);
 
@@ -624,10 +585,9 @@ int main()
 	Implicit::Rotate r2(&line_scale, glm::vec3(0, 0, 1), M_PI/2.f);
 	Implicit::Union u1(&r1, &r2);
 	Implicit::Union u2(&line_scale, &u1);
-
-
 	Implicit::Union jack(&u2, &caps);
-	Mesh m = Polygonize(jack, 150);
+	Mesh m = Polygonize(jack, 70);
+
 	m.Export("output.obj");
 	return 0;
 }
