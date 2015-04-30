@@ -25,6 +25,10 @@ class Mesh
 {
 public:
 	Mesh(Implicit::Object& o, std::vector<TRIANGLE> tris);
+	Mesh();
+
+	void Generate(Implicit::Object& o, std::vector<TRIANGLE> tris);
+
 
 	void AddFace(Implicit::Object& o, const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& v3);
 	void AddFace(Implicit::Object& o, const TRIANGLE& tri);

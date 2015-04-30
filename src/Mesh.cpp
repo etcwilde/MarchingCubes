@@ -5,6 +5,13 @@ Mesh::Mesh(Implicit::Object& o, std::vector<TRIANGLE> tris)
 	build(o, tris);
 }
 
+Mesh::Mesh() {}
+
+void Mesh::Generate(Implicit::Object& o, std::vector<TRIANGLE> tris)
+{
+	build(o, tris);
+}
+
 void Mesh::AddFace(Implicit::Object& O, const TRIANGLE& tri)
 {
 	AddFace(tri.p[0], tri.p[1], tri.p[2],
