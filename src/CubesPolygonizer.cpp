@@ -15,6 +15,7 @@ glm::vec3 CubesPolygonizer::VertexInterp(const glm::vec3& x0, const glm::vec3& x
 
 Mesh CubesPolygonizer::polygonize()
 {
+	auto begin = std::chrono::high_resolution_clock::now();
 	glm::vec3 minima, maxima;
 	std::vector<TRIANGLE> tris;
 	minima = m_scene.GetBoundingBox().min();
@@ -103,6 +104,11 @@ Mesh CubesPolygonizer::polygonize()
 		delete voxels[x];
 	}
 	delete voxels;
+	auto end = std::chrono::high_resolution_clock::now();
+	std::cout << "Polygonization Time: " <<
+		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+		<< "ms\n";
+
 	return Mesh(m_scene, tris);
 }
 

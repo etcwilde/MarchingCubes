@@ -7,6 +7,7 @@
 #include <glm/glm.hpp>
 
 #include "Polygonizer.hpp"
+#include <iostream>
 
 
 class CubesPolygonizer : public Polygonizer

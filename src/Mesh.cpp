@@ -1,11 +1,33 @@
 #include "Mesh.hpp"
+Mesh::Mesh()
+{
+}
 
 Mesh::Mesh(Implicit::Object& o, std::vector<TRIANGLE> tris)
 {
 	build(o, tris);
 }
 
-Mesh::Mesh() {}
+Mesh::Mesh(Mesh& m) :
+	m_triangles(m.m_triangles),
+	m_verts(m.m_verts),
+	m_norms(m.m_norms)
+{ }
+
+Mesh::Mesh(const Mesh& m) :
+	m_triangles(m.m_triangles),
+	m_verts(m.m_verts),
+	m_norms(m.m_norms)
+{ }
+
+
+void Mesh::operator=(const Mesh& m)
+{
+	m_triangles = m.m_triangles;
+	m_verts = m.m_verts;
+	m_norms = m.m_norms;
+}
+
 
 void Mesh::Generate(Implicit::Object& o, std::vector<TRIANGLE> tris)
 {
@@ -32,101 +54,122 @@ void Mesh::AddFace(const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& v3
 	if (v1 == v3) return;
 	if (v2 == v3) return;
 	INDEX_TRIANGLE t;
-
-	bool v1_found = false;
-	bool v2_found = false;
-	bool v3_found = false;
-
-	for (unsigned int index = 0; index < m_verts.size(); index++)
-	{
-		if (v1 == m_verts[index])
-		{
-			t.p[0] = index + 1;
-			v1_found = true;
-		}
-		if (v2 == m_verts[index])
-		{
-			t.p[1] = index + 1;
-			v2_found = true;
-		}
-		if (v3 == m_verts[index])
-		{
-			t.p[2] = index + 1;
-			v3_found = true;
-		}
-		if (v1_found && v2_found && v3_found) break;
-	}
-
-
-	if (!v1_found)
-	{
-		m_verts.push_back(v1);
-		t.p[0] = m_verts.size();
-	}
-	if (!v2_found)
-	{
-		m_verts.push_back(v2);
-		t.p[1] = m_verts.size();
-	}
-	if (!v3_found)
-	{
-		m_verts.push_back(v3);
-		t.p[2] = m_verts.size();
-	}
-
-	bool n1_found = false;
-	bool n2_found = false;
-	bool n3_found = false;
-	for (unsigned int index = 0; index < m_norms.size(); index++)
-	{
-		if (n1 == m_norms[index])
-		{
-			t.n[0] = index + 1;
-			n1_found = true;
-		}
-		if (n2 == m_norms[index])
-		{
-			t.n[1] = index + 1;
-			n2_found = true;
-		}
-		if (n3 == m_norms[index])
-		{
-			t.n[2] = index + 1;
-			n3_found = true;
-		}
-		if (n1_found && n2_found && n3_found) break;
-	}
-
-	if (!n1_found)
-	{
-		m_norms.push_back(n1);
-		t.n[0] = m_norms.size();
-	}
-	if (!n2_found)
-	{
-		m_norms.push_back(n2);
-		t.n[1] = m_norms.size();
-	}
-	if(!n3_found)
-	{
-		m_norms.push_back(n3);
-		t.n[2] = m_norms.size();
-	}
+	find_verts(v1, v2, v3, &t.p[0], &t.p[1], &t.p[2]);
+	find_norms(n1, n2, n3, &t.n[0], &t.n[1], &t.n[2]);
 	m_triangles.push_back(t);
 }
-
 
 
 void Mesh::build(Implicit::Object& o, std::vector<TRIANGLE> tris)
 {
 	// For each triangle
+
 	std::cout << "Building Geometry...\n";
+	auto begin = std::chrono::high_resolution_clock::now();
 	for (auto tri = tris.begin(); tri != tris.end(); tri++)
 	{
 		AddFace(o, *tri);
 		std::cout << "Triangles: " << m_triangles.size() << "/" << tris.size() << '\r' << std::flush;
 	}
+	auto end = std::chrono::high_resolution_clock::now();
+	std::cout << "\nBuild Time: " <<
+		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
+		<< "ms\n";
 }
+
+
+void Mesh::find_verts(const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& v3,
+			unsigned int* index_1, unsigned int* index_2, unsigned int* index_3)
+{
+	bool v1_found = false;
+	bool v2_found = false;
+	bool v3_found = false;
+
+
+
+	m_verts_mux.lock();
+	for (unsigned int index = 0; index < m_verts.size(); index++)
+	{
+		if (!v1_found && v1 == m_verts[index])
+		{
+			*index_1 = index + 1;
+			v1_found = true;
+		}
+		if (!v2_found && v2 == m_verts[index])
+		{
+			*index_2 = index + 1;
+			v2_found = true;
+		}
+		if (!v3_found && v3 == m_verts[index])
+		{
+			*index_3 = index + 1;
+			v3_found = true;
+		}
+		if (v1_found && v2_found && v3_found) break;
+	}
+
+	if (!v1_found)
+	{
+		m_verts.push_back(v1);
+		*index_1 = m_verts.size();
+	}
+	if(!v2_found)
+	{
+		m_verts.push_back(v2);
+		*index_2 = m_verts.size();
+	}
+	if(!v3_found)
+	{
+		m_verts.push_back(v3);
+		*index_3 = m_verts.size();
+	}
+	m_verts_mux.unlock();
+}
+
+void Mesh::find_norms(const glm::vec3& n1, const glm::vec3& n2, const glm::vec3& n3,
+			unsigned int* index_1, unsigned int* index_2, unsigned int* index_3)
+{
+	bool n1_found = false;
+	bool n2_found = false;
+	bool n3_found = false;
+	m_norms_mux.lock();
+	for(unsigned int index = 0; index < m_norms.size(); index++)
+	{
+		if (!n1_found && n1 == m_norms[index])
+		{
+			*index_1 = index + 1;
+			n1_found = true;
+		}
+		if (!n2_found && n2 == m_norms[index])
+		{
+			*index_2 = index + 1;
+			n2_found = true;
+		}
+		if (!n3_found && n3 == m_norms[index])
+		{
+			*index_3 = index + 1;
+			n3_found = true;
+		}
+		if (n1_found && n2_found && n3_found) break;
+	}
+	if (!n1_found)
+	{
+		m_norms.push_back(n1);
+		*index_1 = m_norms.size();
+	}
+	if (!n2_found)
+	{
+		m_norms.push_back(n2);
+		*index_2 = m_norms.size();
+	}
+	if(!n3_found)
+	{
+		m_norms.push_back(n3);
+		*index_3 = m_norms.size();
+	}
+	m_norms_mux.unlock();
+}
+
 
 void Mesh::Export(std::string fname)
 {

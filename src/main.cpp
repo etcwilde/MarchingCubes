@@ -40,10 +40,8 @@ int main()
 	Implicit::Union u1(&r1, &r2);
 	Implicit::Union u2(&line_scale, &u1);
 	Implicit::Union jack(&u2, &caps);
-	CubesPolygonizer marching_cubes(jack, 50);
-
+	CubesPolygonizer marching_cubes(jack, 150);
 	Mesh m = marching_cubes.Polygonize();
-
 	m.Export("output.obj");
 	return 0;
 }
