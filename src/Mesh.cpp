@@ -61,8 +61,7 @@ Mesh::Triangle Mesh::Get(unsigned int index)
 void Mesh::AddFace(const Mesh::Triangle& t)
 {
 	// Same as AddFace
-	AddFace(t.p[0], t.p[1], t.p[2],
-			t.n[0], t.n[1], t.n[2]);
+	AddFace(t.p[0], t.p[1], t.p[2], t.n[0], t.n[1], t.n[2]);
 }
 
 void Mesh::AddFace(const glm::vec3& v1, const glm::vec3& v2, const glm::vec3& v3,
@@ -153,9 +152,9 @@ void Mesh::Export(const std::string& fname)
 	for (auto face = m_triangles.begin(); face != m_triangles.end(); face++)
 	{
 		os << "f "
-			<< (*face).p[0] << "//" << (*face).n[0] << ' '
-			<< (*face).p[1] << "//" << (*face).n[1] << ' '
-			<< (*face).p[2] << "//" << (*face).n[2] << '\n';
+			<< (*face).p[0] + 1 << "//" << (*face).n[0] + 1 << ' '
+			<< (*face).p[1] + 1 << "//" << (*face).n[1] + 1 << ' '
+			<< (*face).p[2] + 1 << "//" << (*face).n[2] + 1 << '\n';
 	}
 
 	os << "# " << m_verts.size() << " Vertices Written\n";
@@ -215,7 +214,10 @@ void Mesh::Import(const std::string& fname)
 			Index_Triangle t;
 			unsigned int tris_number = m_triangles.size();
 			std::string s = line;
-			std::string pattern = "f ([0-9]*)(?:/([0-9]*)?/([0-9]*)?)? ([0-9]*)(?:/([0-9]*)?/([0-9]*)?)? ([0-9]*)(?:/([0-9]*)?/([0-9]*)?)?"; // Oh goodness
+#ifdef DEBUG
+			std::cout << line  << '\n';
+#endif
+			std::string pattern = "f ([0-9]*)(?:/([0-9]*)?/([0-9]*)?)? ([0-9]*)(?:/([0-9]*)?/([0-9]*)?)? ([0-9]*)(?:/([0-9]*)?/([0-9]*)?)?";
 			std::vector<std::string> matches;
 			std::smatch match;
 			std::regex face_re(pattern);
@@ -239,19 +241,24 @@ void Mesh::Import(const std::string& fname)
 			t.p[1] = std::stof(matches[4]) - 1;
 			t.p[2] = std::stof(matches[7]) - 1;
 
+#ifdef DEBUG
+			std::cout << "Normal: " << matches[3] << ", " <<
+				matches[6] << ", " << matches[9] << '\n';
+#endif
+
 			// If any normals are missing, the face is bad
 			//tris_to_fix.push_back(tris_number);
-			if (matches[2].compare("") == 0 ||
-				matches[5].compare("") == 0 ||
-				matches[8].compare("") == 0)
+			if (matches[3].compare("") == 0 ||
+				matches[6].compare("") == 0 ||
+				matches[9].compare("") == 0)
 			{
 				tris_to_fix.push_back(tris_number);
 			}
 			else
 			{
-				t.n[0] = std::stof(matches[2]) - 1;
-				t.n[1] = std::stof(matches[5]) - 1;
-				t.n[2] = std::stof(matches[8]) - 1;
+				t.n[0] = std::stof(matches[3]) - 1;
+				t.n[1] = std::stof(matches[6]) - 1;
+				t.n[2] = std::stof(matches[9]) - 1;
 			}
 			/*
 			if (matches[2].compare("") != 0)
@@ -266,6 +273,7 @@ void Mesh::Import(const std::string& fname)
 				t.n[2] = std::stof(matches[8]);
 			else t.n[2] = 0;
 			*/
+
 			m_triangles.push_back(t);
 		}
 	}
@@ -396,7 +404,7 @@ void Mesh::fix_norms(std::vector<unsigned int>& tris)
 #ifdef DEBUG
 	std::cout << "Faces to fix: " << tris.size() << '\n';
 #endif
-	for(auto t = tris.begin(); t != tris.end(); t++)
+	/*for(auto t = tris.begin(); t != tris.end(); t++)
 	{
 		Index_Triangle& it = m_triangles[(*t)];
 		const glm::vec3 p1 = m_verts[it.p[0]];
@@ -407,6 +415,7 @@ void Mesh::fix_norms(std::vector<unsigned int>& tris)
 		m_norms.push_back(glm::cross(v, w));
 		it.n[0] = it.n[1] = it.n[2] = m_norms.size();
 	}
+	*/
 
 	/*
 #ifdef DEBUG
