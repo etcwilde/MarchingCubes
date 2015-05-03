@@ -17,7 +17,7 @@ Mesh CubesPolygonizer::polygonize()
 {
 	auto begin = std::chrono::high_resolution_clock::now();
 	glm::vec3 minima, maxima;
-	std::vector<TRIANGLE> tris;
+	std::vector<Mesh::Triangle> tris;
 	minima = m_scene.GetBoundingBox().min();
 	maxima = m_scene.GetBoundingBox().max();
 	float delta_x = maxima.x - minima.x;
@@ -108,11 +108,11 @@ Mesh CubesPolygonizer::polygonize()
 	std::cout << "Polygonization Time: " <<
 		std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count()
 		<< "ms\n";
-
-	return Mesh(m_scene, tris);
+	Mesh m(tris);
+	return m;
 }
 
-int CubesPolygonizer::ResolveCube(GRIDCELL& grid, std::vector<TRIANGLE>& triangles)
+int CubesPolygonizer::ResolveCube(GRIDCELL& grid, std::vector<Mesh::Triangle>& triangles)
 {
 	int i;
 	int cube_index = 0;
@@ -195,10 +195,13 @@ int CubesPolygonizer::ResolveCube(GRIDCELL& grid, std::vector<TRIANGLE>& triangl
 	// Create triangles
 	for (i = 0; triTable[cube_index][i] != -1; i+= 3)
 	{
-		TRIANGLE t;
+		Mesh::Triangle t;
 		t.p[0] = vertlist[triTable[cube_index][i+2]];
 		t.p[1] = vertlist[triTable[cube_index][i+1]];
 		t.p[2] = vertlist[triTable[cube_index][i]];
+		t.n[0] = m_scene.Normal(t.p[0]);
+		t.n[1] = m_scene.Normal(t.p[1]);
+		t.n[2] = m_scene.Normal(t.p[2]);
 		triangles.push_back(t);
 	}
 	return triangles.size();

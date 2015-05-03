@@ -323,7 +323,7 @@ private:
 	};
 
 
-	int ResolveCube(GRIDCELL& grid, std::vector<TRIANGLE>& triangles);
+	int ResolveCube(GRIDCELL& grid, std::vector<Mesh::Triangle>& triangles);
 	glm::vec3 VertexInterp(const glm::vec3& x0, const glm::vec3& x1,
 			float fx0, float fx1);
 

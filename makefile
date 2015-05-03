@@ -41,7 +41,7 @@ D_DOCS	= docs/
 
 # Flags
 CFLAGS	= -c -iquote $(D_INC) -march=native -mfpmath=sse
-LIBS	= -pthread lib/libImplicit.a
+LIBS	= -pthread -lGL lib/libImplicit.a
 CXFLAGS = $(CFLAGS) -std=c++11
 
 # Generate Object file names
