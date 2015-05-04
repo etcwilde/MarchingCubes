@@ -152,9 +152,9 @@ void Mesh::Export(const std::string& fname)
 	for (auto face = m_triangles.begin(); face != m_triangles.end(); face++)
 	{
 		os << "f "
-			<< (*face).p[0] + 1 << "//" << (*face).n[0] + 1 << ' '
-			<< (*face).p[1] + 1 << "//" << (*face).n[1] + 1 << ' '
-			<< (*face).p[2] + 1 << "//" << (*face).n[2] + 1 << '\n';
+			<< (*face).p[0] << "//" << (*face).n[0] << ' '
+			<< (*face).p[1] << "//" << (*face).n[1] << ' '
+			<< (*face).p[2] << "//" << (*face).n[2] << '\n';
 	}
 
 	os << "# " << m_verts.size() << " Vertices Written\n";
@@ -237,9 +237,9 @@ void Mesh::Import(const std::string& fname)
 			}
 
 			// Build Triangle?
-			t.p[0] = std::stof(matches[1]) - 1;
-			t.p[1] = std::stof(matches[4]) - 1;
-			t.p[2] = std::stof(matches[7]) - 1;
+			t.p[0] = std::stof(matches[1]);
+			t.p[1] = std::stof(matches[4]);
+			t.p[2] = std::stof(matches[7]);
 
 #ifdef DEBUG
 			std::cout << "Normal: " << matches[3] << ", " <<
@@ -256,24 +256,10 @@ void Mesh::Import(const std::string& fname)
 			}
 			else
 			{
-				t.n[0] = std::stof(matches[3]) - 1;
-				t.n[1] = std::stof(matches[6]) - 1;
-				t.n[2] = std::stof(matches[9]) - 1;
+				t.n[0] = std::stof(matches[3]);
+				t.n[1] = std::stof(matches[6]);
+				t.n[2] = std::stof(matches[9]);
 			}
-			/*
-			if (matches[2].compare("") != 0)
-				t.n[0] = std::stof(matches[2]);
-			else t.n[0] = 0;
-
-
-			if (matches[5].compare("") != 0)
-				t.n[1] = std::stof(matches[4]);
-			else t.n[1] = 0;
-			if (matches[8].compare("") != 0)
-				t.n[2] = std::stof(matches[8]);
-			else t.n[2] = 0;
-			*/
-
 			m_triangles.push_back(t);
 		}
 	}
@@ -297,6 +283,8 @@ void Mesh::Details()
 	std::cout << "Vertices: " << m_verts.size() << '\n'
 		<< "Normals: " << m_norms.size() << '\n'
 		<< "Triangles: " << m_triangles.size() << '\n';
+	std::cout << "First Vertex: " << m_verts[0].x << " " << m_verts[0].y << " " << m_verts[0].z  << '\n';
+	std::cout << "First Triangle Vertex Index: " << m_triangles[0].p[0] << '\n';
 }
 #endif
 
@@ -404,18 +392,18 @@ void Mesh::fix_norms(std::vector<unsigned int>& tris)
 #ifdef DEBUG
 	std::cout << "Faces to fix: " << tris.size() << '\n';
 #endif
-	/*for(auto t = tris.begin(); t != tris.end(); t++)
+	for(auto t = tris.begin(); t != tris.end(); t++)
 	{
 		Index_Triangle& it = m_triangles[(*t)];
-		const glm::vec3 p1 = m_verts[it.p[0]];
-		const glm::vec3 p2 = m_verts[it.p[1]];
-		const glm::vec3 p3 = m_verts[it.p[2]];
+		const glm::vec3 p1 = m_verts[it.p[0] - 1];
+		const glm::vec3 p2 = m_verts[it.p[1] - 1];
+		const glm::vec3 p3 = m_verts[it.p[2] - 1];
 		const glm::vec3 v = p2 - p1;
 		const glm::vec3 w = p3 - p1;
 		m_norms.push_back(glm::cross(v, w));
 		it.n[0] = it.n[1] = it.n[2] = m_norms.size();
 	}
-	*/
+
 
 	/*
 #ifdef DEBUG
@@ -452,31 +440,24 @@ void Mesh::draw_Triangle(const Index_Triangle& t)
 {
 	glBegin(GL_TRIANGLES);
 	glColor3f(0.8, 0.8, 0.8);
-	glNormal3f(m_norms[t.n[0]].x, m_norms[t.n[0]].y, m_norms[t.n[0]].z);
-	glVertex3f(m_verts[t.p[0]].x, m_verts[t.p[0]].y, m_verts[t.p[0]].z);
-
-	glNormal3f(m_norms[t.n[1]].x, m_norms[t.n[1]].y, m_norms[t.n[1]].z);
-	glVertex3f(m_verts[t.p[1]].x, m_verts[t.p[1]].y, m_verts[t.p[1]].z);
-
-	glNormal3f(m_norms[t.n[2]].x, m_norms[t.n[2]].y, m_norms[t.n[2]].z);
-	glVertex3f(m_verts[t.p[2]].x, m_verts[t.p[2]].y, m_verts[t.p[2]].z);
+	glNormal3f(m_norms[t.n[0] - 1].x, m_norms[t.n[0] - 1].y, m_norms[t.n[0] - 1].z);
+	glVertex3f(m_verts[t.p[0] - 1].x, m_verts[t.p[0] - 1].y, m_verts[t.p[0] - 1].z);
+	glNormal3f(m_norms[t.n[1] - 1].x, m_norms[t.n[1] - 1].y, m_norms[t.n[1] - 1].z);
+	glVertex3f(m_verts[t.p[1] - 1].x, m_verts[t.p[1] - 1].y, m_verts[t.p[1] - 1].z);
+	glNormal3f(m_norms[t.n[2] - 1].x, m_norms[t.n[2] - 1].y, m_norms[t.n[2] - 1].z);
+	glVertex3f(m_verts[t.p[2] - 1].x, m_verts[t.p[2] - 1].y, m_verts[t.p[2] - 1].z);
 	glEnd();
 
 	glBegin(GL_LINE_STRIP);
 	glColor3f(0.2, 0.2, 0.2);
-	glNormal3f(m_norms[t.n[0]].x, m_norms[t.n[0]].y, m_norms[t.n[0]].z);
-	glVertex3f(m_verts[t.p[0]].x, m_verts[t.p[0]].y, m_verts[t.p[0]].z);
-
-
-	glNormal3f(m_norms[t.n[1]].x, m_norms[t.n[1]].y, m_norms[t.n[1]].z);
-	glVertex3f(m_verts[t.p[1]].x, m_verts[t.p[1]].y, m_verts[t.p[1]].z);
-
-	glNormal3f(m_norms[t.n[2]].x, m_norms[t.n[2]].y, m_norms[t.n[2]].z);
-	glVertex3f(m_verts[t.p[2]].x, m_verts[t.p[2]].y, m_verts[t.p[2]].z);
-
-	glNormal3f(m_norms[t.n[0]].x, m_norms[t.n[0]].y, m_norms[t.n[0]].z);
-	glVertex3f(m_verts[t.p[0]].x, m_verts[t.p[0]].y, m_verts[t.p[0]].z);
-
+	glNormal3f(m_norms[t.n[0] - 1].x, m_norms[t.n[0] - 1].y, m_norms[t.n[0] - 1].z);
+	glVertex3f(m_verts[t.p[0] - 1].x, m_verts[t.p[0] - 1].y, m_verts[t.p[0] - 1].z);
+	glNormal3f(m_norms[t.n[1] - 1].x, m_norms[t.n[1] - 1].y, m_norms[t.n[1] - 1].z);
+	glVertex3f(m_verts[t.p[1] - 1].x, m_verts[t.p[1] - 1].y, m_verts[t.p[1] - 1].z);
+	glNormal3f(m_norms[t.n[2] - 1].x, m_norms[t.n[2] - 1].y, m_norms[t.n[2] - 1].z);
+	glVertex3f(m_verts[t.p[2] - 1].x, m_verts[t.p[2] - 1].y, m_verts[t.p[2] - 1].z);
+	glNormal3f(m_norms[t.n[0] - 1].x, m_norms[t.n[0] - 1].y, m_norms[t.n[0] - 1].z);
+	glVertex3f(m_verts[t.p[0] - 1].x, m_verts[t.p[0] - 1].y, m_verts[t.p[0] - 1].z);
 	glEnd();
 }
 
